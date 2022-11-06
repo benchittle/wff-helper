@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "*.lex": "jflex",
+        "*.asm": "masm",
+        "*.inc": "c",
+        "algorithm": "c",
+        "complex": "c",
+        "new": "c",
+        "type_traits": "c"
+    }
+}
