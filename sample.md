@@ -204,44 +204,36 @@ OUTPUT:
 {"(q v p) ^ (p v ~q)", "(p v q) ^ (~q v p)"}
 ```
 
+### Wff Searching
 
-binary unary
-
-
-old code
+To do this, we need to define a pattern for each equivalence to be able to identify potential applications of the equivalence. For example, we could define E10 as `"(p v q)"` which could then be passed to a search function:
 ```
-bool _wff(token_t* const tokenArray, const int length, int* index) {
-    int savedIndex = *index; 
-    token_t* next = next_token(tokenArray, length, index);
-    if (next->type == PROPOSITION) {
-        print_token(next);
-        return true;
-    } 
-    *index = savedIndex;
-    next = next_token(tokenArray, length, index);
-    if (next->type == OPERATOR && next->operator == NOT && _wff(tokenArray, length, index)) {
-        print_token(next);
-        return true;
-    } 
-    *index = savedIndex;
-    next = next_token(tokenArray, length, index);
-    if (next->type == LPAREN) {
-        print_token(next);
-        if (_wff(tokenArray, length, index)) {
-            savedIndex = *index;
-            next = next_token(tokenArray, length, index);
-            if (next->type == OPERATOR && (next->operator == AND || next->operator == OR || next->operator == COND || next->operator == BICOND)) {
-                print_token(next);
-                if (_wff(tokenArray, length, index)) {
-                    next = next_token(tokenArray, length, index);
-                    if (next->type == RPAREN) {
-                        print_token(next);
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-    return false;
-}
+wff_search(wff="((p v q) v (p v p))", search="(p v q)")
+
+OUTPUT
+{"(p v q)", "(p v p)", "((p v q) v (p v p))"}
 ```
+It may be more beneficial to have the output be pointers to the subwffs rather than strings. 
+
+A few notes about the search function:
+- The letters used in the search wff should be treated as non-terminals and should *not* be confused with terminal propositions in the actual wff. I.e. in the example above, we identified `(p v p)` as one of the matching wffs using the search expression `(p v q)`. 
+    - However, if we use the same variable more than once in the search expression, this should be reflected in the results. This may make things difficult (a **wff comparison function** may be needed, or perhaps it could be done iteratively / recursively during the search).
+        ```
+        wff_search(wff="((p v q) v (p v p))", search="(p v p)")
+
+        OUTPUT
+        {"(p v p)"}
+        ```
+- The returned subwffs should use some kind of handle or pointer to indicate which symbols were matched by each part of the search expression. For example:
+    ```
+    wff_search(wff="((p v q) v (p v p))", search="(a v b)")
+
+    OUTPUT
+    {"(p v q)", "(p v p)", "((p v q) v (p v p))"}
+    ```
+    We should know that a=`p` and b=`q` in the first case, a=`p` and b=`p` in the second case, and a=`(p v q)` and b=`(p v p)` in the third case.
+
+### Wff Substitution
+Once we have identified the (sub)wff to which we want to apply the equivalence, we must 
+
+If a tree is used to store a wff and its corresponding subwffs, we can make a substitution by simply replacing the appropriate subtree with a new one for the equivalent wff.

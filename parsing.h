@@ -3,6 +3,11 @@
 
 #include <stdbool.h>
 
+/*
+TODO:
+- data structures for subwff list, token list
+*/
+
 typedef enum {
     WTT_NONE,
     WTT_LPAREN,
@@ -22,19 +27,24 @@ typedef enum {
 
 
 typedef struct WffToken WffToken;
-typedef struct WffParseTree WffParseTree;
+typedef struct WffParsetree WffParsetree;
+typedef struct WffTokenList WffTokenList; // TODO
 
-typedef struct Wff {
+typedef struct WffOld {
     const char* string;
-    WffParseTree* parse_tree;
+    WffParsetree* parsetree;
     WffToken* token_array;
     size_t token_count;
+} WffOld;
+
+typedef struct Wff {
+    char* string;
+    struct Wff* subwffs[5];
 } Wff;
 
-Wff* wff_create(char* wff_string);
-void wff_destroy(Wff* wff);
-bool wff_validate(Wff* wff);
-size_t wff_subwffs(Wff* wff, Wff* subwffs[]);
+WffOld* wffold_create(char* wff_string);
+void wff_destroy(WffOld* wff);
+size_t wff_subwffs(WffOld* wff, WffOld*** subwffs);
 
 /* 
  * Given a string denoting a wff, identify all wff tokens in the string and 
