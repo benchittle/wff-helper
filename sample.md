@@ -143,7 +143,7 @@ PROVE (p v q) ^ (p v ~q) => p
 ## Parsing
 We need to be able to tokenize and parse wffs
 
-For example given the wff `(p v q) ^ (p v ~q) => p`, we need to convert it into a series of tokens:
+For example given the wff `(((p v q) ^ (p v ~q)) => p)`, we need to convert it into a series of tokens:
 ```
 tokenize_wff(wff)
 
@@ -151,7 +151,7 @@ OUTPUT
 {LPAREN, proposition(p), operator(v), proposition(q), RPAREN, operator(^), LPAREN, proposition(p), operator(v), operator(~), proposition(q), RPAREN, operator(=>), proposition(p)}
 ```
 
-For example given the wff `(p v q) ^ (p v ~q) => p`, we need a way to split this into all the possible sub-wffs:
+For example given the wff `(((p v q) ^ (p v ~q)) => p)`, we need a way to split this into all the possible sub-wffs:
 ```
 sub_wffs(wff)
 
@@ -232,6 +232,13 @@ A few notes about the search function:
     {"(p v q)", "(p v p)", "((p v q) v (p v p))"}
     ```
     We should know that a=`p` and b=`q` in the first case, a=`p` and b=`p` in the second case, and a=`(p v q)` and b=`(p v p)` in the third case.
+
+- We can use the parse tree to do the search. Take the above example but use `search="(wff v wff)"` instead for clarity. In our parse tree, we are looking for an exact match of this i.e. a node with 5 children of type `LPAREN`, `WFF`, `OPERATOR(v)`, `WFF`, `RPAREN` where `WFF` can be any terminal or non-terminal node (as long as the wff itself is valid, which we will assume is true at this point in the process).
+    - To parse our search query, we simply use the same parse function as we normally would for wffs, and then give any terminals a special type (maybe `WFF`?).
+    - To perform the search, we do a tree traversal and look at the children of each node to see if they match the format desired. If so, we record it perhaps with a pointer and continue.
+
+    $1 \land$
+
 
 ### Wff Substitution
 Once we have identified the (sub)wff to which we want to apply the equivalence, we must 

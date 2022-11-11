@@ -2,6 +2,7 @@
 #define PARSING_H
 
 #include <stdbool.h>
+#include <stdlib.h>
 
 /*
 TODO:
@@ -27,24 +28,26 @@ typedef enum {
 
 
 typedef struct WffToken WffToken;
-typedef struct WffParsetree WffParsetree;
+typedef struct WffParseTree WffParseTree;
+typedef struct WffTree WffTree;
+typedef struct WffTreeNode WffTreeNode;
 typedef struct WffTokenList WffTokenList; // TODO
 
-typedef struct WffOld {
-    const char* string;
-    WffParsetree* parsetree;
-    WffToken* token_array;
-    size_t token_count;
-} WffOld;
 
 typedef struct Wff {
-    char* string;
-    struct Wff* subwffs[5];
+    const char* string;
+    WffParseTree* parse_tree;
+    WffToken* token_array;
+    size_t token_count;
+    WffTree* wff_tree;
 } Wff;
 
-WffOld* wffold_create(char* wff_string);
-void wff_destroy(WffOld* wff);
-size_t wff_subwffs(WffOld* wff, WffOld*** subwffs);
+
+Wff* wff_create(char* wff_string);
+void wff_destroy(Wff* wff);
+size_t wff_subwffs(Wff* wff, Wff*** subwffs);
+bool wff_match(Wff* wff, char* wff_pattern_string);
+
 
 /* 
  * Given a string denoting a wff, identify all wff tokens in the string and 
