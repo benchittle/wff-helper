@@ -29,8 +29,8 @@ struct WffToken {
  * and 'children' members to store pointers to this node's children nodes 
  * (there can be up to 5, depending on the wff). 
  */
-typedef struct WffParseTreeNode {
-    bool isTerminal;
+struct WffParseTreeNode {
+    WffParseTreeNodeType type;
     union {
         struct {
             int child_count;
@@ -38,7 +38,7 @@ typedef struct WffParseTreeNode {
         };
         WffToken token;
     };
-} WffParseTreeNode;
+};
 
 struct WffParseTree {
     WffParseTreeNode* root;
@@ -77,8 +77,9 @@ void _wff_tree_create(WffParseTreeNode* parse_node, WffTreeNode* wff_node);
 void wff_tree_print(WffTree* wff_tree);
 void _wff_tree_print(WffTreeNode* wff_node, int level);
 
-bool _wff_match(WffParseTreeNode* wff_parse_node, WffParseTreeNode* pattern_parse_node, WffList* list);
-
+void _wff_match_traversal(WffParseTreeNode* wff_parse_root, WffParseTree* pattern_tree, WffMatchList* list);
+bool _wff_match(WffParseTreeNode* wff_parse_node, WffParseTreeNode* pattern_parse_node, WffMatchList* list);
+bool _wff_compare(WffParseTreeNode* node1, WffParseTreeNode* node2);
 // ========
 
 Wff* wff_create(char* wff_string) {
@@ -301,19 +302,19 @@ bool _wff_parse(WffToken* const tokenArray, const int length, int* index, WffPar
     //int savedIndex = *index; 
     WffToken* next = _wff_next_token(tokenArray, length, index);
     if (next->type == WTT_PROPOSITION) {
-        node->isTerminal = false;
+        node->type = WPTNT_NONTERMINAL;
         node->child_count = 1;
         WffParseTreeNode* newNode = malloc(sizeof(WffParseTreeNode));
-        newNode->isTerminal = true;
+        newNode->type = WPTNT_TERMINAL;
         newNode->token = *next;
         node->children[0] = newNode;
         return true;
     } else if (next->type == WTT_OPERATOR && next->operator == WO_NOT) {
-        node->isTerminal = false;
+        node->type = WPTNT_NONTERMINAL;
         node->child_count = 2;
         // First child
         WffParseTreeNode* newNode = malloc(sizeof(WffParseTreeNode));
-        newNode->isTerminal = true;
+        newNode->type = WPTNT_TERMINAL;
         newNode->token = *next;
         node->children[0] = newNode;
         // Second child
@@ -322,11 +323,11 @@ bool _wff_parse(WffToken* const tokenArray, const int length, int* index, WffPar
         node->children[1] = newNode;
         return true;
     } else if (next->type == WTT_LPAREN) {
-        node->isTerminal = false;
+        node->type = WPTNT_NONTERMINAL;
         node->child_count = 5;
         // First child
         WffParseTreeNode* newNode = malloc(sizeof(WffParseTreeNode));
-        newNode->isTerminal = true;
+        newNode->type = WPTNT_TERMINAL;
         newNode->token = *next;
         node->children[0] = newNode;
         // Second child
@@ -339,7 +340,7 @@ bool _wff_parse(WffToken* const tokenArray, const int length, int* index, WffPar
             return false;
         }
         newNode = malloc(sizeof(WffParseTreeNode));
-        newNode->isTerminal = true;
+        newNode->type = WPTNT_TERMINAL;
         newNode->token = *next;
         node->children[2] = newNode;
         // Fourth child
@@ -352,7 +353,7 @@ bool _wff_parse(WffToken* const tokenArray, const int length, int* index, WffPar
             return false;
         }
         newNode = malloc(sizeof(WffParseTreeNode));
-        newNode->isTerminal = true;
+        newNode->type = WPTNT_TERMINAL;
         newNode->token = *next;
         node->children[4] = newNode;
         return true;
@@ -365,7 +366,7 @@ void wff_parsetree_print(WffParseTree* tree) {
 }
 
 void _wff_parsetree_print(WffParseTreeNode* node, int level) {
-    if (node->isTerminal) {
+    if (node->type == WPTNT_TERMINAL) {
         for (int i = 0; i < level; i++) {
             printf("    ");
         }
@@ -444,11 +445,12 @@ size_t wff_subwffs(Wff* wff, Wff*** subwffs_ptr) {
 
 char* _wff_subwffs(WffParseTreeNode* node, char* subwffs[], size_t* index) {
     char* str;
-    if (node->isTerminal) {
+    if (node->type == WPTNT_TERMINAL) {
         str = token_get_string(&(node->token));
         return str;
     } else {
         str = malloc(1);
+        str = '\0';
         int str_size = 1;
         for (int i = 0; i < node->child_count; i++) {
             char* substr = _wff_subwffs(node->children[i], subwffs, index);
@@ -479,7 +481,7 @@ WffTree* wff_tree_create(WffParseTree* parse_tree) {
 void _wff_tree_create(WffParseTreeNode* parse_node, WffTreeNode* wff_node) {
     // If terminal, copy the symbol into wff_node's string (essentially, each
     // recursive call builds the string for the previous call and passes it up).
-    if (parse_node->isTerminal) {
+    if (parse_node->type == WPTNT_TERMINAL) {
         char* token_string = token_get_string(&(parse_node->token));
         wff_node->wff_string = realloc(wff_node->wff_string, (strlen(wff_node->wff_string) + strlen(token_string) + 1) * sizeof(char));
         strcat(wff_node->wff_string, token_string);
@@ -539,39 +541,33 @@ void print_unique(Wff** subwffs, size_t length) {
     }
 }
 
-
-// TODO: We need to identify a list of all matches for a given equivalence
-// - need a linked list?
-// - what is an equivalence doing ?= swapping out one subwff (subtree) for an
-//   equivalent one
-//      - part 1: identify one or more subwffs (subtrees) matching our rule
-//      - part 2: make the substition in one subwff
-// Think about making Wff a tree itself 
-
-WffParseTreeNode* _wff_e12(WffParseTreeNode* node) {
-    if (node->isTerminal) {
-        return NULL;
-    }
-    if (node->child_count == 5) {
-        WffParseTreeNode* child = node->children[2];
-        if (child->isTerminal && child->token.type == WTT_OPERATOR && child->token.operator == WO_AND) {
-            return node;
+char* wff_parse_tree_node_print(WffParseTreeNode* node) {
+    if (node->type == WPTNT_TERMINAL || node->type == WPTNT_SEARCHVAR) {
+        return token_get_string(&(node->token));
+    } else if (node->type == WPTNT_NONTERMINAL) {
+        char* str = malloc(1);
+        str[0] = '\0';
+        int str_size = 1;
+        for (int i = 0; i < node->child_count; i++) {
+            char* substr = wff_parse_tree_node_print(node->children[i]);
+            str_size += strlen(substr);
+            str = realloc(str, str_size);
+            strcat(str, substr);
         }
+        return str;
     }
 }
 
-Wff* wff_e12(Wff* wff) {
-    
-}
 
 // TEMP: Maybe have this function be done by parse tree creation using flag?
 void make_nonterminal(WffParseTreeNode* node) {
     for (int i = 0; i < node->child_count; i++) {
         WffParseTreeNode* child = node->children[i];
-        if (child->isTerminal) {
+        if (child->type == WPTNT_TERMINAL) {
             if (child->token.type == WTT_PROPOSITION) {
+                node->type = WPTNT_SEARCHVAR;
+                node->token = child->token;
                 free(child);
-                node->child_count = 0;
                 return;
             }
         } else {
@@ -580,64 +576,120 @@ void make_nonterminal(WffParseTreeNode* node) {
     }
 }
 
-bool wff_match(Wff* wff, char* wff_pattern_string) {
+WffMatchList* wff_match(Wff* wff, char* wff_pattern_string) {
     Wff* pattern = wff_create(wff_pattern_string);
     make_nonterminal(pattern->parse_tree->root);
 
-    WffTokenList* token_matches = NULL; //wff_token_list_create();
-    return _wff_match(wff->parse_tree->root, pattern->parse_tree->root, token_matches);
+    WffMatchList* token_matches = wff_match_list_create();
+    _wff_match_traversal(wff->parse_tree->root, pattern->parse_tree, token_matches);
+    return token_matches;
 }
 
-bool _wff_match(WffParseTreeNode* wff_parse_node, WffParseTreeNode* pattern_parse_node, WffList* list) {
-    if (pattern_parse_node->isTerminal) {
-        if (wff_parse_node->isTerminal) {
-            // Modified token equality check: whenever we see a proposition in the
-            // pattern, we'll match it against any valid wff or subwff (including
-            // other, different propositions).
-            WffToken wff_token = wff_parse_node->token;
-            WffToken pattern_token = pattern_parse_node->token;
-            if (wff_token.type != pattern_token.type) {
-                return false;
-            }
-            switch (wff_token.type) {
-                case WTT_LPAREN:
-                case WTT_RPAREN:
-                    return true;
-                    break;
-                case WTT_OPERATOR:
-                    return wff_token.operator == pattern_token.operator;
-                    break;
-                default:
-                    printf("ERROR: Unhandled token type\n");
-                    exit(1);
-            }
-        } else {
-            return false;
+void _wff_match_traversal(WffParseTreeNode* wff_parse_node_root, WffParseTree* pattern_tree, WffMatchList* list) {
+    if (wff_parse_node_root->type == WPTNT_NONTERMINAL) {
+        WffMatchList* temp_list = wff_match_list_create();
+        bool result = _wff_match(wff_parse_node_root, pattern_tree->root, temp_list);
+        if (result) {
+            wff_match_list_merge(list, temp_list);
         }
-    } else {
-        if (wff_parse_node->isTerminal) {
-            return pattern_parse_node->child_count == 0;
-        } else {
-            if (pattern_parse_node->child_count > 0) {
-                if (wff_parse_node->child_count == pattern_parse_node->child_count) {
-                    bool isEqual = true;
-                    for (int i = 0; i < wff_parse_node->child_count; i++) {
-                        isEqual = isEqual && _wff_match(wff_parse_node->children[i], pattern_parse_node->children[i], list);
-                    }
-                    return isEqual;
-                } else {
-                    return false;
-                }
-            } else {
-                bool isEqual = true;
-                for (int i = 0; i < wff_parse_node->child_count; i++) {
-                    isEqual = isEqual && _wff_match(wff_parse_node->children[i], pattern_parse_node, list);
-                }
-                return isEqual;
-            }
+        //wff_match_list_append(list, wff_parse_node_root);
+        for (int i = 0; i < wff_parse_node_root->child_count; i++) {
+            _wff_match_traversal(wff_parse_node_root->children[i], pattern_tree, list);
         }
     }
 }
+
+// TODO: Link each search variable to its corresponding subwff. This may need to
+// be a separate function for ease of use for now: similar to function below, but 
+// it creates a match and returns as soon as it reaches a propositional variable 
+// in the search parse tree. It should return a WffMatchList, and we'll read N
+// entries in that list for each match, where N is the number of variables in the 
+// search string (since each match will consist of a match for each variable each 
+// time).
+bool _wff_match(WffParseTreeNode* wff_parse_node, WffParseTreeNode* pattern_parse_node, WffMatchList* list) {
+    if (wff_parse_node->type == WPTNT_TERMINAL && pattern_parse_node->type == WPTNT_TERMINAL ) {
+        // Modified token equality check: whenever we see a proposition in the
+        // pattern, we'll match it against any valid wff or subwff (including
+        // other, different propositions).
+        WffToken wff_token = wff_parse_node->token;
+        WffToken pattern_token = pattern_parse_node->token;
+        if (wff_token.type != pattern_token.type) {
+            return false;
+        }
+        switch (wff_token.type) {
+            case WTT_LPAREN:
+            case WTT_RPAREN:
+                return true;
+                break;
+            case WTT_OPERATOR:
+                return wff_token.operator == pattern_token.operator;
+                break;
+            default:
+                printf("ERROR: Unhandled token type\n");
+                exit(1);
+        }
+
+    } else if (wff_parse_node->type == WPTNT_TERMINAL && pattern_parse_node->type == WPTNT_NONTERMINAL) {
+        //wff_parse_tree_node_list_append(list, wff_parse_node);
+        return pattern_parse_node->child_count == 0;
+
+    } else if (wff_parse_node->type == WPTNT_NONTERMINAL) {
+        if (pattern_parse_node->type == WPTNT_TERMINAL) {
+            return false;
+        } else if (pattern_parse_node->type == WPTNT_NONTERMINAL) {
+            if (wff_parse_node->child_count == pattern_parse_node->child_count) {
+                bool isEqual = true;
+                for (int i = 0; i < wff_parse_node->child_count; i++) {
+                    isEqual = isEqual && _wff_match(wff_parse_node->children[i], pattern_parse_node->children[i], list);
+                }
+                return isEqual;
+            } else {
+                return false;
+            }
+        } else if (pattern_parse_node->type == WPTNT_SEARCHVAR) {
+            // Implement behaviour for same variable appearing in search string 
+            // more than once.
+            wff_match_list_reset_current(list);
+            WffMatch* previous_match = wff_match_list_next(list);
+            while (previous_match != NULL) {
+                if (previous_match->pattern_var_node->token.variable == pattern_parse_node->token.variable) {
+                    if (!_wff_compare(previous_match->wff_node, wff_parse_node)) {
+                        return false;
+                    }
+                }
+                previous_match = wff_match_list_next(list);
+            }
+            wff_match_list_append(list, wff_match_create(wff_parse_node, pattern_parse_node));
+            return true;
+
+            /*bool isEqual = true;
+            for (int i = 0; i < wff_parse_node->child_count; i++) {
+                isEqual = isEqual && _wff_match(wff_parse_node->children[i], pattern_parse_node, list);
+            }
+            return isEqual;*/
+        }
+    }
+}
+
+bool _wff_compare(WffParseTreeNode* node1, WffParseTreeNode* node2) {
+    if (node1->type != node2->type) {
+        return false;
+    }
+    if (node1->type == WPTNT_TERMINAL) {
+        return wff_token_equal(node1->token, node2->token);
+    } else if (node1->type == WPTNT_NONTERMINAL) {
+        if (node1->child_count == node2->child_count) {
+            bool isEqual = true;
+            for (int i = 0; i < node1->child_count; i++) {
+                isEqual = isEqual && _wff_compare(node1->children[i], node2->children[i]);
+            }
+            return isEqual;
+        } else {
+            return false;
+        }
+    }
+}
+
 
 
 /*
@@ -686,7 +738,8 @@ void test_wffs() {
 */
 
 int main(void) {
-    char* wff_string = "(((p v q) v (r v t)) <=> ((p v q) v (r v t)))"; //"(((p v q) ^ (p v ~q)) => p)";
+    char* wff_string = "((p ^ q) => p)"; //"(((p v q) ^ (p v ~q)) => p)";
+    char* search = "(a=>b)";
     Wff* wff = wff_create(wff_string);
 
     printf("%s\n", wff->string);
@@ -697,6 +750,7 @@ int main(void) {
     }
     printf("PARSE TREE:\n");
     wff_parsetree_print(wff->parse_tree);
+    printf("wff_compare: %d", _wff_compare(wff->parse_tree->root, wff->parse_tree->root));
 
     /*
     Wff** subwffs = NULL;
@@ -707,29 +761,23 @@ int main(void) {
     printf("\n\nWFF TREE:\n");
     wff_tree_print(wff->wff_tree);
 
-    char* search = "(((p v q) v (r v t)) => ((p v q) v (r v t)))";
-    bool result = wff_match(wff, search);
-    printf("Searching in wff '%s' for pattern '%s': %d\n", wff->string, search, result);
+    WffMatchList* result = wff_match(wff, search);
+    printf("Searching in wff '%s' for pattern '%s': %d\n", wff->string, search, wff_match_list_length(result));
 
-
-
-
-
+    printf("\nFOUND:\n");
+    wff_match_list_reset_current(result);
+    WffMatch* match = wff_match_list_next(result);
+    int i = 0;
+    while (match != NULL) {
+        printf("%s: %s\n", wff_parse_tree_node_print(match->pattern_var_node), wff_parse_tree_node_print(match->wff_node));
+        match = wff_match_list_next(result);
+        i++;
+        if (i == 2) {
+            printf("\n");
+            i = 0;
+        }
+    }
     
-    /*char* subwffs[100];
-    WffToken* tokenArray[100];
-    int token_count = tokenize_wff(wff, tokenArray);
-    WffParseTree tree = parse_wff(tokenArray, token_count);
-    int num_subwffs = sub_wffs(tree, subwffs);
-    printf("%d subwffs:\n", num_subwffs);
-    print_unique(subwffs, num_subwffs); 
-    */
-    
-    /*for (int i = 0; i < num_subwffs; i++) {
-        printf("%d: '%s'\n", i, subwffs[i]);
-    }*/
-    //print_parsetree(tree);
-
     printf("done\n");
 }
 

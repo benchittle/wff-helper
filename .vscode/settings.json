@@ -6,6 +6,9 @@
         "algorithm": "c",
         "complex": "c",
         "new": "c",
-        "type_traits": "c"
+        "type_traits": "c",
+        "parsing.h": "c",
+        "datastructs.h": "c",
+        "sstream": "c"
     }
 }

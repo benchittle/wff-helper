@@ -7,7 +7,8 @@
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
-                "${file}",
+                "parsing.c",
+                "datastructs.c",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"
             ],
