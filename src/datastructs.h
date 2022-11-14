@@ -68,23 +68,30 @@ WffParseTreeNodeList* wff_find_vars(Wff* wff);
 WffMatchList* wff_match(Wff* wff, char* wff_pattern_string);
 bool wff_substitute(Wff* wff, char* search, char* replace, size_t index);
 
-bool wff_token_equal(WffToken token1, WffToken token2);
+void wff_token_destroy(WffToken* token);
+WffToken* wff_token_copy(WffToken* token);
+bool wff_token_equal(WffToken* token1, WffToken* token2);
 const char* const wff_token_get_string(WffToken* token);
 
 WffTokenVariable* wff_token_variable_create(const char* variable_string);
 void wff_token_variable_destroy(WffTokenVariable* variable);
+WffTokenVariable* wff_token_variable_copy(WffTokenVariable* variable);
 bool wff_token_variable_equals(WffTokenVariable* variable1, WffTokenVariable* variable2);
 const char* wff_token_variable_get_string(WffTokenVariable* variable);
 
 WffParseTree* wff_parse_tree_create(WffTokenList* token_list);
+void wff_parse_tree_destroy(WffParseTree* tree);
 void wff_parse_tree_print(WffParseTree* tree);
 char* wff_parse_tree_node_print(WffParseTreeNode* node);
 bool wff_parse_tree_subtree_equals(WffParseTreeNode* node1, WffParseTreeNode* node2);
 
 WffTree* wff_tree_create(WffParseTree* parse_tree);
+void wff_tree_destroy(WffTree* tree);
 void wff_tree_print(WffTree* wff_tree);
 
 WffMatch* wff_match_create(WffParseTreeNode* wff_node, WffParseTreeNode* pattern_var_node);
+// NOTE: Does not free members, just the 'match' struct
+void wff_match_destroy(WffMatch* match);
 
 WffList* wff_list_create();
 void wff_list_destroy(WffList* list);
