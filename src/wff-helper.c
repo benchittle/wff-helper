@@ -13,7 +13,7 @@ TODO:
 [x] change earlier functions that used arrays (e.g. token_array) to use list
 [ ] abstractify wff_tree (?), parse tree... and their operations
 [ ] clean memory leaks
-[ ] specify consts, etc. in functions
+[x] specify consts, etc. in functions
 [ ] make structs and their usage consistent (i.e. pointers to everything)
 [ ] iterator function?
 [ ] should get_string functions return actual pointer or copy?
