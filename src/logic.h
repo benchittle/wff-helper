@@ -1,5 +1,5 @@
-#ifndef DATASTRUCTS_H_
-#define DATASTRUCTS_H_
+#ifndef LOGIC_H_
+#define LOGIC_H_
 
 #include <stdlib.h>
 #include <stdbool.h>

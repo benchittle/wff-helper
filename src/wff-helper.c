@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 #include "wff-helper.h"
-#include "datastructs.h"
+#include "logic.h"
 
 /*
 TODO:

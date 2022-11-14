@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "datastructs.h"
+#include "logic.h"
 
 typedef struct WffListNode WffListNode;
 typedef struct WffTokenListNode WffTokenListNode;

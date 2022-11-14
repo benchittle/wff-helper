@@ -1,10 +1,10 @@
-#ifndef PARSING_H_
-#define PARSING_H_
+#ifndef WFF_HELPER_H_
+#define WFF_HELPER_H_
 
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "datastructs.h"
+#include "logic.h"
 
 
 
