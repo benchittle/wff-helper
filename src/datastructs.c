@@ -80,7 +80,7 @@ void test() {
     wff_tree_print(wff->wff_tree);
 
     WffMatchList* result = wff_match(wff, search);
-    printf("Searching in wff '%s' for pattern '%s': %d\n", wff->string, search, wff_match_list_length(result));
+    printf("Searching in wff '%s' for pattern '%s': %ld\n", wff->string, search, wff_match_list_length(result));
 
     printf("\nFOUND:\n");
     wff_match_list_reset_current(result);
@@ -334,6 +334,8 @@ bool _wff_match(WffParseTreeNode* wff_parse_node, WffParseTreeNode* pattern_pars
             return isEqual;*/
         }
     }
+    printf("ERROR: Unhandled case\n");
+    abort();
 }
 
 bool wff_substitute(Wff* wff, char* search, char* replace, size_t index) {
@@ -429,8 +431,10 @@ const char* wff_token_get_string(WffToken* token) {
             return STR_LPAREN;
         case WTT_RPAREN:
             return STR_RPAREN;
+        default:
+            printf("ERROR: Unhandled case\n");
+            abort();
     }
-    return NULL;
 }
 
 
@@ -584,6 +588,9 @@ char* wff_parse_tree_node_print(WffParseTreeNode* node) {
         }
         return str;
     }
+
+    printf("ERROR: Unhandled case\n");
+    abort();
 }
 
 bool wff_parse_tree_subtree_equals(WffParseTreeNode* node1, WffParseTreeNode* node2) {
@@ -603,6 +610,8 @@ bool wff_parse_tree_subtree_equals(WffParseTreeNode* node1, WffParseTreeNode* no
             return false;
         }
     }
+    printf("ERROR: Unhandled case\n");
+    abort();
 }
 
 void _wff_parse_tree_set_searchvars(WffParseTreeNode* node) {
@@ -727,6 +736,7 @@ WffList* wff_list_create() {
     list->end = NULL;
     list->current = NULL;
     list->length = 0;
+    return list;
 }
 
 void wff_list_destroy(WffList* list) {
@@ -813,6 +823,7 @@ WffTokenList* wff_token_list_create() {
     list->end = NULL;
     list->current = NULL;
     list->length = 0;
+    return list;
 }
 
 void wff_token_list_destroy(WffTokenList* list) {
@@ -879,6 +890,7 @@ WffMatchList* wff_match_list_create() {
     list->end = NULL;
     list->current = NULL;
     list->length = 0;
+    return list;
 }
 
 void wff_match_list_destroy(WffMatchList* list) {
@@ -978,6 +990,7 @@ WffParseTreeNodeList* wff_parse_tree_node_list_create() {
     list->end = NULL;
     list->current = NULL;
     list->length = 0;
+    return list;
 }
 
 void wff_parse_tree_node_list_destroy(WffParseTreeNodeList* list) {
